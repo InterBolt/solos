@@ -1,0 +1,5 @@
+# Description: This is the base template for a project's Dockerfile.
+
+FROM solos:latest
+
+RUN echo "Hello from your project!" > /root/hello-solos.txt

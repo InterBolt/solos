@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - ci
+
+jobs:
+  MacOS:
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker on macOS
+        uses: douglascamata/setup-docker-macos-action@v1-alpha
+      - name: Install Buildx Plugin
+        run: brew install docker-buildx
+      - name: Verify Docker installation
+        run: |
+          docker --version
+          docker-compose --version
+          docker run --rm hello-world
+      - name: Install VSCode
+        shell: "script -q /dev/null bash -e {0}"
+        run: |
+          brew install --cask visual-studio-code
+          echo 'export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"' >> ~/.bash_profile
+          source ~/.bash_profile
+      - name: Install SolOS
+        env:
+          DOCKER_CLI_HINTS: false
+          DOCKER_BUILDKIT: 1
+          TERM: "xterm-256color"
+        shell: "script -q /dev/null bash -e {0}"
+        run: |
+          chmod +x ./install/install.sh || exit 1
+          ./install/install.sh --repo="${PWD}" || exit 1
+          if ! solos --help; then
+            echo "solos --help failed." >&2
+            exit 1
+          fi
+      - name: Test SolOS
+        shell: "script -q /dev/null bash -e {0}"
+        run: chmod +x ./test/test.sh && ./test/test.sh

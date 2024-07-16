@@ -1,0 +1,12 @@
+*.pem
+*.crt
+*.key
+*.*/
+!.git
+!.github
+.env
+reference.txt
+!.gitkeep
+sandbox.sh
+.DS_Store
+site/

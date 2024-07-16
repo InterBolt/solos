@@ -1,0 +1,7 @@
+site_name: SolOS Documentation
+site_url: https://docs.solos.sh/
+site_description: Technical documentation for SolOS, an opinionated development environment tailored to self-reflection.
+site_author: Colin Campbell
+repo_url: https://github.com/interbolt/solos
+theme:
+  name: material

@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+
+# All FS paths supported inside the firejailed sandbox that any
+# given plugin phase runs in.
+SUPPORTED_FS_PATHS=(
+  # A cache directory that persists between plugin phases. Caches are not
+  # shared between plugins. This is a good place to store large files that
+  # are expensive to download or generate.
+  "/root/cache"
+  # Everything in the solos workspace folder, but minus secrets and sensitive stuff.
+  "/root/solos"
+  # The solos.config.json file containing the plugin's configuration.
+  "/root/solos.config.json"
+  # The downloaded data from the plugin's download phase.
+  "/root/download"
+  # The downloaded data from all plugins' download phases.
+  "/root/plugins/download"
+  # The processed data from the plugin's process phase.
+  "/root/processed.json"
+  # The processed data from all plugins' process phases.
+  "/root/plugins/processed"
+  # A log of text chunks that plugin authors can use to bootstrap RAG AI services.
+  "/root/chunks.log"
+  # All chunks from all plugins' chunk phases. Allows plugin authors to aggregate data from
+  # services they have no control over.
+  "/root/plugins/chunks"
+)
+######################################################################
+##
+## EVERYTHING YOU NEED TO KNOW ABOUT PLUGINS IS IN THIS MAIN FUNCTION
+##
+######################################################################
+plugin.main() {
+  if [[ ${1} = "--phase-configure" ]]; then
+    plugin.verify_fs \
+      "configure" \
+      "file:/root/solos.config.json:777" \
+      "dir:/root/cache:777"
+    plugin.verify_network_acccess "configure" "false"
+  elif [[ ${1} = "--phase-download" ]]; then
+    plugin.verify_fs \
+      "download" \
+      "dir:/root/download:777" \
+      "file:/root/solos.config.json:555" \
+      "dir:/root/cache:777"
+    plugin.verify_network_acccess "download" "true"
+  elif [[ ${1} = "--phase-process" ]]; then
+    plugin.verify_fs \
+      "process" \
+      "dir:/root/download:555" \
+      "dir:/root/plugins/download:555" \
+      "dir:/root/solos:555" \
+      "file:/root/processed.json:777" \
+      "file:/root/solos.config.json:555" \
+      "dir:/root/cache:777"
+    plugin.verify_network_acccess "process" "false"
+  elif [[ ${1} = "--phase-chunk" ]]; then
+    plugin.verify_fs \
+      "chunk" \
+      "file:/root/processed.json:555" \
+      "dir:/root/plugins/processed:555" \
+      "file:/root/chunks.log:777" \
+      "file:/root/solos.config.json:555" \
+      "dir:/root/cache:777"
+    plugin.verify_network_acccess "chunk" "true"
+  elif [[ ${1} = "--phase-publish" ]]; then
+    plugin.verify_fs \
+      "publish" \
+      "file:/root/chunks.log:555" \
+      "dir:/root/plugins/chunks:555" \
+      "file:/root/solos.config.json:555" \
+      "dir:/root/cache:777"
+    plugin.verify_network_acccess "publish" "true"
+  else
+    echo "SOLOS_PANIC: ${1} does not equal one of --phase-configure, --phase-download, --phase-process, --phase-chunk, or --phase-publish." >&2
+    exit 1
+  fi
+}
+######################################################################
+##
+## Helper functions to verify the state of each plugin of each plugin
+## phase. Not super necessary to understand these functions.
+##
+######################################################################
+plugin.verify_fs() {
+  local phase="${1}"
+  shift
+  local expect_absence=("${SUPPORTED_FS_PATHS[@]}")
+  local dirs=()
+  local files=()
+  local args=("${@}")
+  for arg in "${args[@]}"; do
+    local type="$(echo "${arg}" | cut -d':' -f1)"
+    local path="$(echo "${arg}" | cut -d':' -f2)"
+    local permission="$(echo "${arg}" | cut -d':' -f3)"
+    if [[ ${type} = "dir" ]]; then
+      dirs+=("${path}")
+    elif [[ ${type} = "file" ]]; then
+      files+=("${path}")
+    else
+      echo "SOLOS_PANIC: ${type} is not a valid type. Use 'dir' for directories and 'file' for files in phase: ${phase}." >&2
+      exit 1
+    fi
+    if [[ ! "${SUPPORTED_FS_PATHS[@]}" =~ "${path}" ]]; then
+      echo "SOLOS_PANIC: ${path} is not an allowed path in phase: ${phase}." >&2
+      exit 1
+    fi
+    local actual_chmod_permission="$(stat -c "%a" "${path}")"
+    if [[ ${permission} != "${actual_chmod_permission}" ]]; then
+      echo "SOLOS_PANIC: ${path} should have permission ${permission} in phase: ${phase}." >&2
+      exit 1
+    fi
+    expect_absence=("${expect_absence[@]/$path/}")
+  done
+  for dir in "${dirs[@]}"; do
+    if [[ ! -d ${dir} ]]; then
+      echo "SOLOS_PANIC: ${dir} directory should exist in phase: ${phase}." >&2
+      exit 1
+    fi
+  done
+  for file in "${files[@]}"; do
+    if [[ ! -f ${file} ]]; then
+      echo "SOLOS_PANIC: ${file} file should exist in phase: ${phase}." >&2
+      exit 1
+    fi
+  done
+  for path in "${expect_absence[@]}"; do
+    if [[ -e ${path} ]]; then
+      echo "SOLOS_PANIC: ${path} should not exist in phase: ${phase}." >&2
+      exit 1
+    fi
+  done
+}
+plugin.verify_network_acccess() {
+  local phase="${1}"
+  local expects_access="${2}"
+  local detected_access=false
+  local urls=(
+    "https://www.google.com"
+    "https://www.github.com"
+    "https://www.example.com"
+    "https://www.facebook.com"
+    "https://www.twitter.com"
+    "https://www.linkedin.com"
+    "https://www.instagram.com"
+    "https://www.reddit.com"
+    "https://www.youtube.com"
+    "https://www.netflix.com"
+    "https://www.hulu.com"
+  )
+  for url in "${urls[@]}"; do
+    if curl -s -I "${url}" >/dev/null; then
+      detected_access=true
+    fi
+  done
+  if [[ ${expects_access} != "${detected_access}" ]]; then
+    echo "SOLOS_PANIC: Network access should be enabled in phase: ${phase}." >&2
+    exit 1
+  fi
+}
+
+plugin.main "$@"
