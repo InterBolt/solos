@@ -23,20 +23,13 @@ USAGE: ${cmd_name} COMMANDS [ARGS]
 
 DESCRIPTION:
 
-Prompts the user to write a note. Any positional arguments supplied that are not \
-valid options will be eval'd.
+Take a note with the option to add a tag, run the positional args (if supplied), track the output, and take a post-exec note.
 
 OPTIONS:
 
 -n         Note only. Will not prompt for a tag.
 -t         Tag only. Will not prompt for a note.
 -c         Command only. Will not prompt for a tag or note.
-
-NOTES:
-
-- All tracked outputs, notes, and other metadatas are saved within ${track__base_dir/\/root\//~\/}.
-- SolOS uses the \`track\` command internally to track all entered prompts and their outputs. To turn this off, prefix your prompt with a hyphen likeso: "- <prompt>". Ex: "- ls | grep foo | less".
-- The \`track\` command should not be used within scripts.
 
 EOF
 }

@@ -10,20 +10,13 @@ USAGE: plugins COMMAND [NAME] [URL]
 
 DESCRIPTION:
 
-Manage plugins for the current SolOS project. Plugins provide secure data collections for third party systems (ie. LLM RAG dbs, UI dashboards, analytics tools, etc).
+Manage plugins for the project.
 
 COMMANDS:
 
 add          - Add a plugin to the SolOS. If no url is provided, a local plugin is created and initialized with some boilerplate.
 remove       - Remove a plugin from the SolOS. To prevent accidental code loss, only non-local plugins can be removed via this command.
                Manual instructions will be printed for removing local plugins.
-
-NOTES:
-
-- Plugins are controlled by a manifest file at: ${plugins__manifest_file}.
-- An added plugin will not start running until the current set of plugins have completed all their phases. And a removed plugin will complete any remaining phases before being removed.
-- Plugins are run in the order they are added to the manifest file.
-- Local plugins are stored at: ${plugins__dir}.
 
 EOF
 }

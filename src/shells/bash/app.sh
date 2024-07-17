@@ -7,7 +7,7 @@ USAGE: app COMMAND [NAME]
 
 DESCRIPTION:
 
-Manage apps for the project ($(lib.checked_out_project)).
+Manage apps for the project.
 
 COMMANDS:
 

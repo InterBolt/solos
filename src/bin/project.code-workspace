@@ -33,11 +33,11 @@
     "terminal.integrated.profiles.osx": {
       "bash": {
         "path": "___container__users_home_dir___/.solos/repo/src/bin/host.sh",
-        "args": ["bash", "___container__project___", "ide"]
+        "args": ["bash", "___container__project___"]
       },
       "bash:minimal": {
         "path": "___container__users_home_dir___/.solos/repo/src/bin/host.sh",
-        "args": ["bash:minimal", "___container__project___", "ide"]
+        "args": ["bash:minimal", "___container__project___"]
       },
       "zsh": null,
       "fish": null,

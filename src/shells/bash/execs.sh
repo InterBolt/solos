@@ -25,7 +25,7 @@ USAGE: ${lifecycle} COMMAND [FUNCTION_NAME]
 DESCRIPTION:
 
 Manage a list of functions that will run (in the order they are added) \
-${when} any entered entered shell prompt (can contain multiple BASH_COMMAND(s) in a single entered prompt). For use in \`~/.solos/rcfiles/.bashrc\`.
+${when} any entered entered shell prompt executes. For use in \`~/.solos/rcfiles/.bashrc\`.
 
 COMMANDS:
 

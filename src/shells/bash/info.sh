@@ -103,6 +103,7 @@ $(
       app "$(app --help | info.extract_usage_description)" \
       plugins "$(plugins --help | info.extract_usage_description)" \
       track "$(track --help | info.extract_usage_description)" \
+      note "An alias of the \`track\` command." \
       github "$(github --help | info.extract_usage_description)"
   )
 
@@ -116,9 +117,7 @@ $(
       reload "$(reload --help | info.extract_usage_description)" \
       panics "$(panics --help | info.extract_usage_description)"
   )
-
 ${user_plugins_sections}
-
 $(
     info.table_format \
       "ABOUT THIS SHELL:" \
@@ -133,12 +132,9 @@ $(
 $(
     info.table_format \
       "IMPORTANT FILES/FOLDERS:" \
-      'Checked out project' "~/.solos/projects/${checked_out_project}" \
+      'Current project' "~/.solos/projects/${checked_out_project}" \
       'User managed rcfile' "~/.solos/rcfiles/.bashrc" \
       'Internal rcfile' "~/.solos/repo/shells/bash/.bashrc" \
-      'Config' "~/.solos/config" \
-      'Secrets' "~/.solos/secrets" \
-      'Data' "~/.solos/data" \
       'Installed Plugins' "~/.solos/plugins"
   )
 EOF

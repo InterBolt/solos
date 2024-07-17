@@ -33,7 +33,7 @@ USAGE: daemon COMMAND [ARGS]
 
 DESCRIPTION:
 
-Some utility commands to manage the daemon process.
+Manage the daemon process.
 
 COMMANDS:
 
@@ -44,11 +44,6 @@ flush       - Prints the logs to stdout before wiping the file.
 reload      - Restart the daemon process.
 kill        - Kill the daemon process.
 foreground  - Run the daemon in the foreground.
-
-NOTES:
-
-- The --verbose flag can be supplied after the \`foreground\` and \`reload\` commands to \
-enable verbose logging from the daemon process. Eg. \`daemon foreground --verbose\`.
 
 EOF
 }
