@@ -16,10 +16,10 @@ RUN apt-get update \
   manpages-dev \
   keychain \
   procps \
-  firejail \
   gpg \
   rsync \
-  python3.11 python3-pip python3.11-venv
+  python3.11 python3-pip python3.11-venv \
+  build-essential
 
 # Install mkdocs
 RUN python3.11 -m venv .venv && ./.venv/bin/python -m pip install mkdocs mkdocs-material

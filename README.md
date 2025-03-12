@@ -1,20 +1,32 @@
-# 🔭 SolOS - The Introspective Dev Environment
-A Docker-based development environment built for self-analysis.
+# 🔭 SolOS - The Compounding Dev Environment
+SolOS is a MacOS CLI tool that seamlessly orchestrates long-running development containers and provides some useful goodies along the way.
 
 ## Documentation
 Documentation in progress at [https://docs.solos.sh](https://docs.solos.sh).
 
-## Overview
-SolOS is a MacOS CLI tool that seamlessly orchestrates and manages a long-running development container and centralized master volume on a users' host machine (at `$HOME/.solos`). The master volume is mounted into the active development container and stores all of a user's development-related work (ie. scripts, repositories, experiments, notes, activity data, etc) across a variety of projects. 
+## Architecture
 
-> 💡 Customizing the development container is as simple as editing a generated Dockerfile and typing `solos rebuild <project>`
+Consider the following command:
 
-Most importantly, SolOS includes a custom Bash shell with some utility commands and tracking capabilities built-in. Within this shell, a user can install and run various third party plugins (or their own custom plugins) to process their master volume and export the results to external systems, such as an LLM chatbot backend or classic reporting tool.
+```sh
+solos bash myproject
+```
 
-> 🔒 For the security conscious folks, see the security considerations section below.
+When ran this command:
+
+1) Invokes the installed SolOS bin script at `/usr/local/bin/solos` using Bash.
+   > This script keeps portability in mind.
+2) The bin script initializes the "myproject" docker image, while ensuring no other active project containers are running. 
+   > On the first run of this command a default dockerfile specific to "myproject" defines the initial container build. It's customizable later.
+3) Next, the bin script invokes a verification command in the newly created project container, preparing any necessary state along with some sanity checks.
+4) Once the project container is verfied, our bin script has the confidence to launch a new bash session. The session includes all kinds of useful things as a result of the rcfile it uses. Ie. **tracks all user commands and their stdout/stderr**, **exposes lifecycle hooks for pre/post user command**, **sets up git and github authentication**, **automates pulling in or creating new apps and their repos**, **provides a way to extend command lifecycles and tracking mechanisms**, and more.
 
 ## The Vision
-The vision of SolOS is to provide a sufficiently delightful way of working so that its users are rarely, if ever, tempted to leave the system. **The more of a developer's activity that is stored inside the master volume (due to them staying within the SolOS system), the more *detailed and holistic* a knowledge base that plugins can create.**
+Encourage the accrual of organization specific cheat codes to make work simpler and more reproducable. 
+
+For example, maybe your company's dev services go down more often and/or break in non-obvious ways. A developer can add pre and post exec checks in the project's generated rcfile specific to each app. Ie. an "app" that contains some frontend code might ping the backend services it calls before any use of "npm run start" in the projects shell.
+
+And as more and more environment quirks are needed, the project specific dockerfile allows a developer to customize to their hearts delight.
 
 ## Installation
 Requires: **MacOS**, **Bash** version >= 3, **Git**, **Docker**, **VSCode**
@@ -60,21 +72,7 @@ solos rebuild:no-cache <project>
 solos dispose
 ```
 
-## Plugins
-Plugins make it possible to extract interesting information from a user's master volume for third party systems to consume. The best way to understand how a plugin works is to review SolOS's ["precheck" plugin](https://github.com/InterBolt/solos/blob/main/src/daemon/plugins/precheck/plugin). A plugin executable runs in discrete phases, where each phase has access to different files, folders, and network conditions. The precheck plugin linked above validates all access assumptions.
-
-## Security Considerations
-User-installed plugins are just executables. SolOS mitigates the risk of running them by:
-- Executing them within a private, firejailed sandbox with restricted filesystem and network access.
-- Only allowing access to a heavily scrubbed copy of the developer's master volume (`~/.solos`).
-
-The scrubbing mechanism automatically removes high-risk files and secrets, prunes gitignored files, and more. SolOS users are encouraged (but not required) to download executables from trusted sources, such as popular GitHub repositories, which means the above **mitigations are more to prevent accidental, rather than malicious, leakages** of sensitive information.
-
 ## Contributor Commandments
 - **Guard against corporate spyware use cases**.
 - **Minimize configuration requirements.**
 - **Ensure seamless migrations between machines**.
-- **Ensure the base Docker image remains unopinionated**.
-- **Adopt a conservative approach to the shell API**.
-- **Make source code easily inspectable and modifiable** without complicated build pipelines or compilation steps.
-- **Limit the scope of SolOS** to the following: 1) the plugin daemon, 2) custom shells, 3) IDE integrations, and 4) a host CLI. Prefer internal plugins for other functionalities.

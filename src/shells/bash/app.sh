@@ -25,7 +25,7 @@ app.add() {
   fi
   local checked_out_project="$(lib.checked_out_project)"
   local app_dir="${HOME}/.solos/projects/${checked_out_project}/apps/${app_name}"
-  local app_dir_on_host="$(lib.home_to_tilde "${app_dir}")"
+  local app_dir_on_host="$(lib.to_host_home "${app_dir}")"
   if [[ -d "${app_dir}" ]]; then
     shell.log_error "App already exists: ${app_name}"
     return 1
@@ -71,7 +71,7 @@ app.remove() {
   fi
   local checked_out_project="$(lib.checked_out_project)"
   local app_dir="${HOME}/.solos/projects/${checked_out_project}/apps/${app_name}"
-  local app_dir_on_host="$(lib.home_to_tilde "${app_dir}")"
+  local app_dir_on_host="$(lib.to_host_home "${app_dir}")"
   if [[ ! -d "${app_dir}" ]]; then
     shell.log_error "App does not exist: ${app_name}"
     return 1

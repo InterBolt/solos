@@ -68,12 +68,10 @@ shell.set_ps1() {
 # These expect top-level access to shell.* commands.
 . "${HOME}/.solos/repo/src/shells/bash/app.sh" || exit 1
 . "${HOME}/.solos/repo/src/shells/bash/bash-completions.sh" || exit 1
-. "${HOME}/.solos/repo/src/shells/bash/daemon.sh" || exit 1
 . "${HOME}/.solos/repo/src/shells/bash/execs.sh" || exit 1
 . "${HOME}/.solos/repo/src/shells/bash/github.sh" || exit 1
 . "${HOME}/.solos/repo/src/shells/bash/info.sh" || exit 1
 . "${HOME}/.solos/repo/src/shells/bash/panics.sh" || exit 1
-. "${HOME}/.solos/repo/src/shells/bash/plugins.sh" || exit 1
 . "${HOME}/.solos/repo/src/shells/bash/track.sh" || exit 1
 
 # Public functions
@@ -135,15 +133,6 @@ shell.public_preexec() {
 }
 shell.public_postexec() {
   execs.cmd "postexec" "$@"
-}
-shell.public_plugin() {
-  plugins.cmd "$@"
-}
-shell.public_plugins() {
-  plugins.cmd "$@"
-}
-shell.public_daemon() {
-  daemon.cmd "$@"
 }
 shell.public_panic() {
   panics.cmd "$@"

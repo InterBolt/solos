@@ -26,20 +26,14 @@ host__project_docker_image="solos-checked-out-project:latest"
 host__project_docker_container="solos-checked-out-project"
 # Paths specific to the docker FS.
 host__containerized_bin_path="/root/.solos/repo/src/bin/container.sh"
-host__containerized_daemon_path="/root/.solos/repo/src/daemon/daemon.sh"
 # Files used to communicated information between the host and the container.
 host__data_store_users_home_dir_file="${host__data_dir}/store/users_home_dir"
 host__data_cli_dir_master_log_file="${host__data_dir}/cli/master.log"
 host__data_cli_dir_built_project_file="${host__data_dir}/cli/built_project"
 host__data_cli_dir_built_project_from_dockerfile_file="${host__data_dir}/cli/built_project_from"
-host__data_daemon_last_active_at_file="${host__data_dir}/daemon/last_active_at"
-host__data_daemon_master_log_file="${host__data_dir}/daemon/master.log"
-host__data_daemon_request_file="${host__data_dir}/daemon/request"
-host__data_daemon_status_file="${host__data_dir}/daemon/status"
 
 mkdir -p "${host__data_dir}/store"
 mkdir -p "${host__data_dir}/cli"
-mkdir -p "${host__data_dir}/daemon"
 mkdir -p "${host__data_dir}/panics"
 mkdir -p "${host__plugins_dir}"
 if [[ ! -f "${host__plugins_manifest_file}" ]]; then
@@ -121,14 +115,9 @@ host.destroy() {
       fi
     fi
   done
-  if ! rm -f "${host__data_daemon_last_active_at_file}"; then
-    host.log_error "Failed to mark the daemon as inactive."
-    return 1
-  fi
 }
 # Steps:
 # - destroy existing containers and images.
-# - mark the daemon as inactive.
 # - determine which dockerfile to use for the project (the custom one or the default one).
 # - ensure the dockerfile for the project extends the solos:latest base image.
 # - build the base image.
@@ -190,15 +179,18 @@ host.build() {
   fi
 
   # Start the project container.
-  if ! docker run \
-    -d \
-    --name "${host__project_docker_container}" \
-    -p 7000-8000:7000-8000 \
-    --pid host \
-    --privileged \
-    -v "/var/run/docker.sock:/var/run/docker.sock" \
-    -v "${HOME}/.solos:/root/.solos" \
-    "${host__project_docker_image}" tail -f /dev/null >/dev/null; then
+  if
+    ! docker run \
+      -d \
+      -p 7000:7000 \
+      --name "${host__project_docker_container}" \
+      --pid host \
+      --privileged \
+      --cpus=4 \
+      -v "/var/run/docker.sock:/var/run/docker.sock" \
+      -v "${HOME}/.solos:/root/.solos" \
+      "${host__project_docker_image}" tail -f /dev/null >/dev/null
+  then
     host.log_error "Failed to run the docker container."
     return 1
   fi
@@ -209,108 +201,6 @@ host.build() {
     sleep .2
   done
   host.log_info "The development container is ready."
-}
-# Will check to see if the daemon is active. If a retry delay is supplied
-# as the third argument, it will wait that many seconds and then check again.
-# The activity tolerance is the number of seconds we tolerate the daemon not updating
-# the last_active_at file before we consider it inactive.
-host.is_daemon_active() {
-  local target_project="${1}"
-  if [[ ${target_project} = "NONE" ]]; then
-    return 1
-  fi
-  local activity_tolerance="${2:-10}"
-  local retry_delay="${3:-"0"}"
-  local last_active_at="$(cat "${host__data_daemon_last_active_at_file}" 2>/dev/null || echo "")"
-  if [[ -z ${last_active_at} ]]; then
-    return 1
-  fi
-  local last_active_project="$(echo "${last_active_at}" | tr -s ' ' | cut -d' ' -f1)"
-  local last_active_seconds="$(echo "${last_active_at}" | tr -s ' ' | cut -d' ' -f2)"
-  if [[ ${last_active_project} != "${target_project}" ]]; then
-    return 1
-  fi
-  local is_active=false
-  local curr_seconds="$(date +%s)"
-  if [[ $((curr_seconds - last_active_seconds)) -lt "${activity_tolerance}" ]]; then
-    if [[ ${retry_delay} -gt 0 ]]; then
-      sleep "${retry_delay}"
-      if host.is_daemon_active "${target_project}" "${activity_tolerance}"; then
-        is_active=true
-      fi
-    else
-      is_active=true
-    fi
-  fi
-  if [[ ${is_active} = true ]]; then
-    return 0
-  fi
-  return 1
-}
-# This will take care of making sure the correct project is built and ready before
-# launching the daemon process within the container. For extra safety, if the daemon
-# fails to start on the first attempt, it will try to rebuild the container and start
-# the daemon again.
-host.start_daemon() {
-  local target_project="${1}"
-  if [[ ${target_project} = "NONE" ]]; then
-    host.log_error "You must specify a project name or have a project checked out to start the daemon."
-    return 1
-  fi
-  local activity_tolerance="${2:-"10"}"
-  local retry_delay="${3:-"5"}"
-  local attempts="${4:-"0"}"
-  attempts="$((attempts + 1))"
-  local max_attempts=2
-  if [[ ${attempts} -gt ${max_attempts} ]]; then
-    return 1
-  fi
-  if [[ ${attempts} -gt 1 ]]; then
-    host.log_info "Attempting to start the daemon for project: ${target_project} (attempt ${attempts})"
-  fi
-  local was_rebuilt=false
-  # Before we can ask if the daemon is active or not, we need to make
-  # sure the container we're using is valid, running, the right project, etc.
-  if host.is_rebuild_necessary "${target_project}"; then
-    if ! host.build "${target_project}"; then
-      host.log_error "Failed to rebuild the development container for project: ${target_project}"
-      return 1
-    fi
-    was_rebuilt=true
-  fi
-
-  # If we just rebuilt our container, there is no way the daemon is active.
-  if [[ ${was_rebuilt} = false ]]; then
-    if host.is_daemon_active "${target_project}" "${activity_tolerance}" "${retry_delay}"; then
-      host.log_info "The daemon is running."
-      return 0
-    fi
-  fi
-
-  # Mark the daemon as active by saving the project and seconds to the last_active file.
-  # This prevents any strange edge cases where another process is calling this function at the same time.
-  # We want to avoid ever accidentally starting the daemon twice.
-  if ! echo "${target_project} $(date +%s)" >"${host__data_daemon_last_active_at_file}"; then
-    host.log_error "Failed to mark the daemon as active."
-    return 1
-  fi
-  if ! docker exec "${host__project_docker_container}" \
-    /bin/bash -c 'nohup "'"${host__containerized_daemon_path}"'" >/dev/null 2>&1 &' >/dev/null; then
-    # If something fails here, it's almost certainly a problem with the container, environment, etc.
-    # Keeping with the mindset that our container should always be disposable, we'll try to rebuild it
-    # and start the daemon again.
-    if ! host.build "${target_project}"; then
-      host.log_error "Failed to rebuild the development container for project: ${target_project}"
-      return 1
-    fi
-    # If the recursive attempt(s) fail, we give up and return an error code.
-    if ! host.start_daemon "${target_project}" "${retry_delay}" "${attempts}"; then
-      host.log_error "Failed to start the daemon for project: ${target_project}"
-      return 1
-    fi
-  fi
-  host.log_success "The daemon was started."
-  return 0
 }
 # This will ensure the project name supplied is valid and that if an empty name is supplied,
 # it will default to the previously checked out project. And if no project has been checked out,
@@ -341,7 +231,7 @@ host.acquire_target_project() {
 }
 # This will perform a rebuild of the container if necessary, and then check out the project.
 # If we find that the checked out project stored in our filesystem is the same as the project
-# name supplied, we return early with a success code. And in either case, we start the daemon.
+# name supplied, we return early with a success code
 host.checkout() {
   local target_project="${1}"
   if [[ ${target_project} = "NONE" ]]; then
@@ -358,10 +248,6 @@ host.checkout() {
   fi
   local checked_out_project="$(lib.checked_out_project)"
   if [[ ${checked_out_project} = "${target_project}" ]]; then
-    if ! host.start_daemon "${target_project}" "10" "0"; then
-      host.log_error "Failed to start the daemon for project: ${target_project}"
-      return 1
-    fi
     return 0
   fi
   host.log_info "Checking out project: ${target_project}"
@@ -380,10 +266,6 @@ host.checkout() {
       host.log_error "Failed to rebuild the development container for project: ${target_project}"
       return 1
     fi
-  fi
-  if ! host.start_daemon "${target_project}" "10" "0"; then
-    host.log_error "Failed to start the daemon for project: ${target_project}"
-    return 1
   fi
   host.log_success "Checked out project: ${target_project}"
 }

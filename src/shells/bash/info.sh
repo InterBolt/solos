@@ -101,7 +101,6 @@ $(
       "COMMON COMMANDS:" \
       info "Print info about this shell." \
       app "$(app --help | info.extract_usage_description)" \
-      plugins "$(plugins --help | info.extract_usage_description)" \
       track "$(track --help | info.extract_usage_description)" \
       note "An alias of the \`track\` command." \
       github "$(github --help | info.extract_usage_description)"
@@ -111,7 +110,6 @@ $(
     info.table_format \
       "ADVANCED COMMANDS:" \
       '-' "Runs its arguments as a command. Avoids pre/post exec functions and output tracking." \
-      daemon "$(daemon --help | info.extract_usage_description)" \
       preexec "$(preexec --help | info.extract_usage_description)" \
       postexec "$(postexec --help | info.extract_usage_description)" \
       reload "$(reload --help | info.extract_usage_description)" \

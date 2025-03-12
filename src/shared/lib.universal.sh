@@ -103,6 +103,19 @@ lib.home_to_tilde() {
 }
 export -f lib.home_to_tilde
 
+lib.to_host_home() {
+  local full_path="${1}"
+  local host_home="$(lib.home_dir_path)"
+  if [[ ${full_path} == "~"* ]]; then
+    echo "${full_path/\~/${host_home}}"
+  elif [[ ${full_path} == "/root"* ]]; then
+    echo "${full_path/\/root/${host_home}}"
+  else
+    echo "${full_path}"
+  fi
+}
+export -f lib.to_host_home
+
 lib.enter_to_exit() {
   echo "Press enter to exit..."
   read -r || exit 1
